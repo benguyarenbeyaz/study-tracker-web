@@ -51,7 +51,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, className = "", l
         onClick={() => setOpen(!open)}
         className={`w-full h-full bg-transparent rounded px-2 py-1.5 ${textSize} cursor-pointer flex justify-between items-center transition-colors outline-none hover:bg-white/[0.04]`}
       >
-        <span className={`pr-2 text-left whitespace-normal break-words leading-snug ${getOptionColor ? getOptionColor(value) : "text-slate-200"}`}>
+        <span className={`pr-2 text-left whitespace-normal break-words leading-snug ${!value ? "text-slate-500 italic" : (getOptionColor ? getOptionColor(value) : "text-slate-200")}`}>
           {value || placeholder}
         </span>
         {!hideArrow && <span className="text-[10px] text-slate-500 shrink-0">▼</span>}
@@ -103,7 +103,7 @@ const CustomDatePicker = ({ value, onChange, placeholder = "DD/MM/YYYY", classNa
         onChange={handleInput} 
         onClick={handleOpenPicker}
         placeholder={placeholder} 
-        className="w-full bg-transparent focus:outline-none text-[12px] font-mono text-slate-300 placeholder-slate-600 text-center relative z-10 px-1 py-1.5" 
+        className="w-full bg-transparent focus:outline-none text-[12px] font-mono text-slate-300 placeholder:text-slate-500 placeholder:italic text-center relative z-10 px-2 py-1.5" 
       />
       <input 
         type="date" 
@@ -142,7 +142,7 @@ const CustomTimePicker = ({ value, onChange, placeholder = "00:00", className = 
         onChange={handleInput} 
         onClick={handleOpenPicker}
         placeholder={placeholder} 
-        className="w-full bg-transparent focus:outline-none text-[12px] font-mono text-slate-300 placeholder-slate-600 text-center relative z-10 px-1 py-1.5" 
+        className="w-full bg-transparent focus:outline-none text-[12px] font-mono text-slate-300 placeholder:text-slate-500 placeholder:italic text-center relative z-10 px-2 py-1.5" 
       />
       <input 
         type="time" 
@@ -217,13 +217,13 @@ export default function MasterLogTab({ appState, onSave }: { appState: any; onSa
   
   const [newSubtask, setNewSubtask] = useState("");
   const [qaName, setQaName] = useState("");
-  const [qaCat, setQaCat] = useState(sortedCategories[0] || "Other");
+  const [qaCat, setQaCat] = useState("");
   const [qaDate, setQaDate] = useState("");
   const [qaStart, setQaStart] = useState("");
   const [qaEnd, setQaEnd] = useState("");
   const [qaEstTime, setQaEstTime] = useState("");
   const [qaDue, setQaDue] = useState("");
-  const [qaPriority, setQaPriority] = useState("Medium");
+  const [qaPriority, setQaPriority] = useState("");
   const [qaNotes, setQaNotes] = useState("");
   const [draggedRowTask, setDraggedRowTask] = useState<string | null>(null);
   const [draggedSubtask, setDraggedSubtask] = useState<{taskName: string, idx: number} | null>(null);
@@ -343,8 +343,8 @@ export default function MasterLogTab({ appState, onSave }: { appState: any; onSa
     const existingIdx = studyData.findIndex((t: any) => t.Name.trim().toLowerCase() === qaName.trim().toLowerCase());
     if (existingIdx >= 0) return alert("A task with this name already exists.");
     const newRow = {
-      Name: qaName.trim(), Category: qaCat, Date: qaDate.trim(), Start: qaStart.trim(), End: qaEnd.trim(), 
-      "Pomodoros (done)": 0, "Est. Time": qaEstTime.trim(), Due: qaDue.trim(), Priority: qaPriority, 
+      Name: qaName.trim(), Category: qaCat || "Other", Date: qaDate.trim(), Start: qaStart.trim(), End: qaEnd.trim(), 
+      "Pomodoros (done)": 0, "Est. Time": qaEstTime.trim(), Due: qaDue.trim(), Priority: qaPriority || "Medium", 
       Notes: qaNotes.trim(), Status: "Active", sessions: []
     };
     onSave({ ...appState, study_data: [newRow, ...studyData] });
@@ -779,7 +779,7 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
         </div>
 
         <div className="flex flex-wrap items-center gap-3 shrink-0 px-4 py-3 border-b border-slate-800/60 bg-[#06080c] w-full">
-          <input type="text" value={qaName} onChange={(e) => setQaName(e.target.value)} placeholder="New Task Name..." className="flex-[3] min-w-[200px] bg-transparent border border-slate-800 hover:border-slate-700 focus:border-indigo-500/50 rounded-md px-3 py-1.5 text-[13px] text-slate-200 transition-colors outline-none font-medium" />
+          <input type="text" value={qaName} onChange={(e) => setQaName(e.target.value)} placeholder="New Task Name..." className="flex-[2] min-w-[200px] bg-transparent border border-slate-800 hover:border-slate-700 focus:border-indigo-500/50 rounded-md px-3 py-1.5 text-[13px] text-slate-200 transition-colors outline-none font-medium" />
           <div className="w-[140px] border border-slate-800 hover:border-slate-700 rounded-md transition-colors">
             <CustomSelect value={qaCat} onChange={setQaCat} options={sortedCategories} placeholder="Category" />
           </div>
@@ -792,14 +792,14 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
           <div className="w-[85px] border border-slate-800 hover:border-slate-700 rounded-md transition-colors">
             <CustomTimePicker value={qaEnd} onChange={setQaEnd} placeholder="End" />
           </div>
-          <input type="text" value={qaEstTime} onChange={(e) => setQaEstTime(e.target.value)} placeholder="Est." className="w-[70px] bg-transparent border border-slate-800 hover:border-slate-700 focus:border-indigo-500/50 rounded-md px-3 py-1.5 text-[13px] text-slate-200 transition-colors outline-none text-center" />
+          <input type="text" value={qaEstTime} onChange={(e) => setQaEstTime(e.target.value)} placeholder="Est." className="w-[80px] bg-transparent border border-slate-800 hover:border-slate-700 focus:border-indigo-500/50 rounded-md px-3 py-1.5 text-[13px] text-slate-200 transition-colors outline-none text-center placeholder:text-slate-500 placeholder:italic" />
           <div className="w-[110px] border border-slate-800 hover:border-slate-700 rounded-md transition-colors">
             <CustomDatePicker value={qaDue} onChange={setQaDue} placeholder="Due" />
           </div>
           <div className="w-[110px] border border-slate-800 hover:border-slate-700 rounded-md transition-colors">
             <CustomSelect value={qaPriority} onChange={setQaPriority} options={["Urgent", "High", "Medium", "Low"]} placeholder="Priority" getOptionColor={getPriorityColor} />
           </div>
-          <input type="text" value={qaNotes} onChange={(e) => setQaNotes(e.target.value)} placeholder="Notes..." className="flex-[2] min-w-[150px] bg-transparent border border-slate-800 hover:border-slate-700 focus:border-indigo-500/50 rounded-md px-3 py-1.5 text-[13px] text-slate-200 transition-colors outline-none" />
+          <input type="text" value={qaNotes} onChange={(e) => setQaNotes(e.target.value)} placeholder="Notes..." className="flex-[3] min-w-[200px] bg-transparent border border-slate-800 hover:border-slate-700 focus:border-indigo-500/50 rounded-md px-3 py-1.5 text-[13px] text-slate-200 transition-colors outline-none placeholder:text-slate-500 placeholder:italic" />
           <button onClick={handleQuickAdd} className="bg-pink-300 hover:bg-pink-200 text-neutral-900 px-5 py-1.5 rounded-md text-[13px] font-bold transition-colors outline-none shadow-md">Add</button>
         </div>
 
