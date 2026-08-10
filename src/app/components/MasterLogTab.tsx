@@ -194,6 +194,10 @@ export default function MasterLogTab({ appState, onSave }: { appState: any; onSa
   const [sortConfig, setSortConfig] = useState<{ key: string, dir: 'asc'|'desc' } | null>(null);
   const [filterCat, setFilterCat] = useState("All Categories");
   const [showSubtasks, setShowSubtasks] = useState<boolean>(true);
+  const [showCompletedSubs, setShowCompletedSubs] = useState(false);
+  const [showUpcoming, setShowUpcoming] = useState(true);
+  const [showToday, setShowToday] = useState(true);
+  const [showPast, setShowPast] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem("masterLogUIState");
@@ -306,8 +310,11 @@ export default function MasterLogTab({ appState, onSave }: { appState: any; onSa
     // Manual overrides
     if (task["Time Logged"] !== undefined && String(task["Time Logged"]).trim() !== "") {
         totalLogMins = parseTimeStr(task["Time Logged"]);
-    } else if (!task.sessions || task.sessions.length === 0) {
-        totalLogMins += calcDiff(task.Start, task.End);
+    } else {
+        totalLogMins = sessionLogMins + (Number(task["Pomodoros (done)"]) || 0) * 25;
+        if (!task.sessions || task.sessions.length === 0) {
+            totalLogMins += calcDiff(task.Start, task.End);
+        }
     }
     
     totalLogMins += (Number(task["Pomodoros (done)"]) || 0) * 25;
@@ -540,7 +547,8 @@ export default function MasterLogTab({ appState, onSave }: { appState: any; onSa
            end_time: "", 
            est_time: "", 
            time_logged: "", 
-           notes: "" 
+           notes: "",
+           status: "Active"
         };
         sess.subsessions = [...(sess.subsessions || []), newSub];
         newSess[sIdx] = sess;
@@ -808,17 +816,18 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
             <thead className="bg-[#050505] sticky top-0 z-10 shadow-sm border-b border-slate-800/80">
               <tr className="text-slate-500 uppercase tracking-wider text-[10px] font-bold">
                 <th className="px-2 py-3 w-[3%] text-center"></th>
-                <th onClick={() => handleSort('Name')} className="px-2 py-3 text-left w-[20%] cursor-pointer hover:text-slate-300 select-none">Name {sortConfig?.key === 'Name' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
-                <th onClick={() => handleSort('Category')} className="px-2 py-3 text-left w-[11%] cursor-pointer hover:text-slate-300 select-none">Category {sortConfig?.key === 'Category' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th onClick={() => handleSort('Name')} className="px-2 py-3 text-left w-[18%] cursor-pointer hover:text-slate-300 select-none">Name {sortConfig?.key === 'Name' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th onClick={() => handleSort('Category')} className="px-2 py-3 text-left w-[10%] cursor-pointer hover:text-slate-300 select-none">Category {sortConfig?.key === 'Category' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => handleSort('Date')} className="px-2 py-3 text-center w-[7%] cursor-pointer hover:text-slate-300 select-none">Date {sortConfig?.key === 'Date' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th onClick={() => handleSort('Date Finished')} className="px-2 py-3 text-center w-[7%] cursor-pointer hover:text-slate-300 select-none">Finished {sortConfig?.key === 'Date Finished' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => handleSort('Start')} className="px-2 py-3 text-center w-[5%] cursor-pointer hover:text-slate-300 select-none">Start {sortConfig?.key === 'Start' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => handleSort('End')} className="px-2 py-3 text-center w-[5%] cursor-pointer hover:text-slate-300 select-none">End {sortConfig?.key === 'End' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => handleSort('Time Logged')} className="px-2 py-3 text-center w-[6%] cursor-pointer hover:text-slate-300 select-none">Logged {sortConfig?.key === 'Time Logged' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th className="px-2 py-3 text-center w-[5%]">Est.</th>
                 <th onClick={() => handleSort('Due')} className="px-2 py-3 text-center w-[7%] cursor-pointer hover:text-slate-300 select-none">Due {sortConfig?.key === 'Due' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
-                <th onClick={() => handleSort('Priority')} className="px-2 py-3 text-center w-[7%] cursor-pointer hover:text-slate-300 select-none">Priority {sortConfig?.key === 'Priority' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
-                <th className="px-2 py-3 text-left w-[14%]">Notes</th>
-                <th className="px-2 py-3 text-center w-[8%]">Status</th>
+                <th onClick={() => handleSort('Priority')} className="px-2 py-3 text-left w-[7%] cursor-pointer hover:text-slate-300 select-none">Priority {sortConfig?.key === 'Priority' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th className="px-2 py-3 text-left w-[11%]">Notes</th>
+                <th className="px-2 py-3 text-left w-[7%]">Status</th>
                 <th className="px-2 py-3 w-[2%]"></th>
               </tr>
             </thead>
@@ -863,6 +872,7 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
                 const renderSessionRow = (sess: any, isSub: boolean = false, subIdx: number = -1, parentIdx: number = -1) => {
                    const displayEst = isSub ? sess.est_time : (sess.subsessions?.length ? minsToStr(sess.calcEst) : sess.est_time);
                    const displayLogged = isSub ? sess.time_logged : (sess.subsessions?.length ? minsToStr(sess.calcLog) : sess.time_logged);
+                   const isCompleted = sess.status === "Completed";
                    
                    const onChange = (field: string, val: any) => {
                       if (isSub) updateSubsessionField(task.Name, parentIdx, subIdx, field, val);
@@ -870,12 +880,15 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
                    };
 
                    return (
-                    <div key={isSub ? `sub-${parentIdx}-${subIdx}` : `sess-${sess.originalIdx}`} className={`flex gap-2 items-center text-[12px] py-1.5 px-2 hover:bg-slate-800/30 rounded transition-colors group ${isSub ? 'ml-6 border-l-2 border-slate-700/50 pl-4 bg-slate-900/40' : ''}`}>
+                    <div key={isSub ? `sub-${parentIdx}-${subIdx}` : `sess-${sess.originalIdx}`} className={`flex gap-2 items-center text-[12px] py-1.5 px-2 hover:bg-slate-800/30 rounded transition-colors group ${isSub ? 'ml-6 border-l-2 border-slate-700/50 pl-4 bg-slate-900/40' : ''} ${isCompleted ? 'opacity-40' : ''}`}>
                       <div className="flex-[3] min-w-[120px]">
-                        <AutoTextarea value={sess.name} onChange={(val: string) => onChange("name", val)} className={`text-slate-300 font-medium ${isSub ? 'text-[11px] text-slate-400' : ''}`} placeholder="Session Name" />
+                        <AutoTextarea value={sess.name} onChange={(val: string) => onChange("name", val)} className={`font-medium ${isSub ? 'text-[11px]' : ''} ${isCompleted ? 'text-slate-500 line-through' : (isSub ? 'text-slate-400' : 'text-slate-300')}`} placeholder="Session Name" />
                       </div>
                       <div className="w-[85px]">
                         <CustomDatePicker value={sess.date} onChange={(val: string) => onChange("date", val)} placeholder="-" className="w-full text-center" />
+                      </div>
+                      <div className="w-[85px]">
+                        <CustomDatePicker value={sess.date_finished} onChange={(val: string) => onChange("date_finished", val)} placeholder="-" className="w-full text-center" />
                       </div>
                       <div className="w-[60px]">
                         <CustomTimePicker value={sess.start_time} onChange={(val: string) => onChange("start_time", val)} placeholder="-" className="w-full text-center" />
@@ -883,24 +896,18 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
                       <div className="w-[60px]">
                         <CustomTimePicker value={sess.end_time} onChange={(val: string) => onChange("end_time", val)} placeholder="-" className="w-full text-center" />
                       </div>
-                      <div className="w-[60px]">
-                        <input type="text" value={displayEst} onChange={(e) => onChange("est_time", e.target.value)} onBlur={(e) => { const parsed = parseTimeStr(e.target.value); if(e.target.value.trim() !== "" && parsed > 0) onChange("est_time", minsToStr(parsed)); }} placeholder="-" className={`w-full bg-transparent focus:outline-none text-center ${sess.subsessions?.length && !isSub ? 'text-indigo-300 font-bold' : 'text-slate-400'}`} disabled={!isSub && sess.subsessions?.length > 0} />
-                      </div>
                       <div className="w-[70px]">
-                        <input type="text" value={displayLogged} onChange={(e) => onChange("time_logged", e.target.value)} onBlur={(e) => { const parsed = parseTimeStr(e.target.value); if(e.target.value.trim() !== "" && parsed > 0) onChange("time_logged", minsToStr(parsed)); }} placeholder="-" className={`w-full bg-transparent focus:outline-none text-center font-mono ${sess.subsessions?.length && !isSub ? 'text-slate-300 font-bold' : 'text-slate-400'}`} disabled={!isSub && sess.subsessions?.length > 0} />
+                        <input type="text" value={displayLogged} onChange={(e) => onChange("time_logged", e.target.value)} onBlur={(e) => { const parsed = parseTimeStr(e.target.value); if(e.target.value.trim() !== "" && parsed > 0) onChange("time_logged", minsToStr(parsed)); }} placeholder="-" className={`w-full bg-transparent focus:outline-none text-center font-mono ${sess.subsessions?.length && !isSub ? 'text-slate-300 font-bold' : 'text-slate-400'} ${isCompleted ? 'line-through' : ''}`} disabled={!isSub && sess.subsessions?.length > 0} />
+                      </div>
+                      <div className="w-[60px]">
+                        <input type="text" value={displayEst} onChange={(e) => onChange("est_time", e.target.value)} onBlur={(e) => { const parsed = parseTimeStr(e.target.value); if(e.target.value.trim() !== "" && parsed > 0) onChange("est_time", minsToStr(parsed)); }} placeholder="-" className={`w-full bg-transparent focus:outline-none text-center ${sess.subsessions?.length && !isSub ? 'text-indigo-300 font-bold' : 'text-slate-400'} ${isCompleted ? 'line-through' : ''}`} disabled={!isSub && sess.subsessions?.length > 0} />
                       </div>
                       <div className="flex-[2] min-w-[100px] pl-2">
-                        <AutoTextarea value={sess.notes || ""} onChange={(val: string) => onChange("notes", val)} className="text-slate-400 text-[11px]" placeholder="Notes..." />
+                        <AutoTextarea value={sess.notes || ""} onChange={(val: string) => onChange("notes", val)} className={`text-[11px] ${isCompleted ? 'text-slate-600 line-through' : 'text-slate-400'}`} placeholder="Notes..." />
                       </div>
-                      
-                      {!isSub ? (
-                        <div className="w-[85px]">
-                          <CustomSelect hideArrow={true} value={sess.status} onChange={(val: string) => onChange("status", val)} options={["Active", "Completed"]} getOptionColor={getStatusColor} className="w-full text-center font-bold" />
-                        </div>
-                      ) : (
-                        <div className="w-[85px]"></div>
-                      )}
-                      
+                      <div className="w-[85px]">
+                        <CustomSelect hideArrow={true} value={sess.status || "Active"} onChange={(val: string) => onChange("status", val)} options={["Active", "Completed"]} getOptionColor={getStatusColor} className="w-full text-center font-bold" />
+                      </div>
                       <div className="w-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
                         {!isSub && <button onClick={() => addSubsession(task.Name, sess.originalIdx)} className="text-indigo-400 hover:text-indigo-300 text-[14px]" title="Add Subsession">+</button>}
                         <button onClick={() => { if(!isSub) deleteSession(task.Name, sess.originalIdx); else deleteSubsession(task.Name, parentIdx, subIdx); }} className="text-rose-500/70 hover:text-rose-400 text-xs" title="Delete">🗑️</button>
@@ -916,22 +923,37 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
                       onDragStart={(e) => handleRowDragStart(e, task.Name)} 
                       onDragOver={handleRowDragOver} 
                       onDrop={(e) => handleRowDrop(e, task.Name)}
-                      onClick={() => setActiveTask(isActive ? null : task.Name)} 
-                      className={`transition-colors cursor-pointer group ${isActive ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"}`}
+                      className={`transition-colors group ${isActive ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"}`}
                     >
-                      <td className="px-2 py-3 text-center align-top min-w-[32px]" onClick={(e) => { e.stopPropagation(); setExpandedRow(isExpanded ? null : task.Name); }}>
-                        <span className="text-slate-500 hover:text-slate-300 font-bold text-xs cursor-pointer transition-colors px-1 mt-1 block">
-                          {isExpanded ? "▼" : "▶"}
-                        </span>
+                      <td 
+                        className="px-2 py-3 text-center align-top min-w-[32px] cursor-pointer hover:bg-white/[0.04] transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setExpandedRow(isExpanded ? null : task.Name); }}
+                        title="Click to open sessions"
+                      >
+                        <div className="flex flex-col items-center mt-1.5 pointer-events-none">
+                          {task.sessions && task.sessions.length > 0 ? (
+                            <span className="text-slate-500 font-bold text-xs transition-colors px-1 block">
+                              {isExpanded ? "▼" : "▶"}
+                            </span>
+                          ) : <span className="w-3 block"></span>}
+                        </div>
                       </td>
-                      <td className="px-2 py-3 align-top min-w-0">
+                      <td className="px-2 py-3 align-top min-w-0" onClick={() => setActiveTask(isActive ? null : task.Name)}>
                         <AutoTextarea value={task.Name} onChange={(val: string) => updateTaskField(task.Name, "Name", val)} className={isActive ? 'text-indigo-200' : 'text-slate-200'} />
+                        {subtaskDict[task.Name] && subtaskDict[task.Name].length > 0 && (
+                          <div className="text-[10px] text-slate-500 font-bold mt-1.5 flex items-center gap-1">
+                            ↳ {subtaskDict[task.Name].filter((s:any) => s.done).length}/{subtaskDict[task.Name].length} subtasks
+                          </div>
+                        )}
                       </td>
                       <td className="px-1 py-2 align-top pt-2.5 min-w-0">
                         <CustomSelect hideArrow={true} value={task.Category} onChange={(v: string) => updateTaskField(task.Name, "Category", v)} options={sortedCategories} className="w-full" />
                       </td>
                       <td className="px-1 py-2 align-top pt-2.5 min-w-0">
                         <CustomDatePicker value={task.Date} onChange={(v: string) => updateTaskField(task.Name, "Date", v)} placeholder="-" className="w-full" />
+                      </td>
+                      <td className="px-1 py-2 align-top pt-2.5 min-w-0">
+                        <CustomDatePicker value={task["Date Finished"]} onChange={(v: string) => updateTaskField(task.Name, "Date Finished", v)} placeholder="-" className="w-full" />
                       </td>
                       <td className="px-1 py-2 align-top pt-2.5 min-w-0">
                         <CustomTimePicker value={task.Start || ""} onChange={(v: string) => updateTaskField(task.Name, "Start", v)} placeholder="-" className="w-full" />
@@ -942,9 +964,9 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
                       <td className="px-2 py-3 align-top pt-2.5 min-w-0">
                         <input 
                           type="text" 
-                          value={task["Time Logged"] !== undefined ? task["Time Logged"] : (totals.sessionLogMins > 0 ? minsToStr(totals.sessionLogMins) : "")} 
+                          value={task["Time Logged"] !== undefined ? task["Time Logged"] : (totals.rawLogged > 0 ? totals.logged : "")} 
                           onChange={(e) => updateTaskField(task.Name, "Time Logged", e.target.value)} 
-                          placeholder={totals.sessionLogMins > 0 ? minsToStr(totals.sessionLogMins) : "-"}
+                          placeholder={totals.rawLogged > 0 ? totals.logged : "-"}
                           className="w-full bg-transparent focus:outline-none text-center text-[12px] font-mono text-slate-300 font-medium placeholder-slate-500" 
                         />
                       </td>
@@ -989,27 +1011,30 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
                                 </div>
                               </div>
                               
-                              <div className="space-y-0">
+                              <div className="space-y-0 max-h-[350px] overflow-y-auto custom-scrollbar relative pr-1">
                                 {task.sessions && task.sessions.length > 0 && (
-                                  <div className="flex gap-2 text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2 pb-1 border-b border-slate-800/30 mb-1">
+                                  <div className="flex gap-2 text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2 py-2 border-b border-slate-800/30 mb-2 sticky top-0 bg-[#06080c] z-20 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
                                     <div className="flex-[3] min-w-[120px]">Session Name</div>
                                     <div className="w-[85px] text-center">Date</div>
+                                    <div className="w-[85px] text-center">Finished</div>
                                     <div className="w-[60px] text-center">Start</div>
                                     <div className="w-[60px] text-center">End</div>
-                                    <div className="w-[60px] text-center">Est.</div>
                                     <div className="w-[70px] text-center">Logged</div>
+                                    <div className="w-[60px] text-center">Est.</div>
                                     <div className="flex-[2] min-w-[100px] text-left pl-2">Notes</div>
-                                    <div className="w-[85px] text-center">Status</div>
+                                    <div className="w-[85px] text-left">Status</div>
                                     <div className="w-10"></div>
                                   </div>
                                 )}
                                 
                                 {task.sessions && task.sessions.length > 0 ? (
-                                  <div className="flex flex-col gap-4">
+                                  <div className="flex flex-col gap-4 pb-4">
                                     {upcomingSessions.length > 0 && (
                                       <div>
-                                        <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1 px-2 border-b border-slate-700/50 pb-1">Upcoming</div>
-                                        {upcomingSessions.map((sess: any) => (
+                                        <div onClick={() => setShowUpcoming(!showUpcoming)} className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1 px-2 border-b border-slate-700/50 pb-1 cursor-pointer hover:text-slate-300 transition-colors flex items-center gap-1.5">
+                                          {showUpcoming ? "▼" : "▶"} Upcoming ({upcomingSessions.length})
+                                        </div>
+                                        {showUpcoming && upcomingSessions.map((sess: any) => (
                                           <React.Fragment key={`upcoming-frag-${sess.originalIdx}`}>
                                             {renderSessionRow(sess)}
                                             {sess.subsessions?.map((sub: any, sIdx: number) => renderSessionRow(sub, true, sIdx, sess.originalIdx))}
@@ -1018,9 +1043,11 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
                                       </div>
                                     )}
                                     {todaySessions.length > 0 && (
-                                      <div>
-                                        <div className="text-[10px] text-indigo-400/80 uppercase font-bold tracking-widest mb-1 px-2 border-b border-indigo-500/20 pb-1 mt-2">Today</div>
-                                        {todaySessions.map((sess: any) => (
+                                      <div className={upcomingSessions.length > 0 ? "mt-2" : ""}>
+                                        <div onClick={() => setShowToday(!showToday)} className="text-[10px] text-indigo-400/80 uppercase font-bold tracking-widest mb-1 px-2 border-b border-indigo-500/20 pb-1 cursor-pointer hover:text-indigo-300 transition-colors flex items-center gap-1.5">
+                                          {showToday ? "▼" : "▶"} Today ({todaySessions.length})
+                                        </div>
+                                        {showToday && todaySessions.map((sess: any) => (
                                           <React.Fragment key={`today-frag-${sess.originalIdx}`}>
                                             {renderSessionRow(sess)}
                                             {sess.subsessions?.map((sub: any, sIdx: number) => renderSessionRow(sub, true, sIdx, sess.originalIdx))}
@@ -1029,9 +1056,11 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
                                       </div>
                                     )}
                                     {pastSessions.length > 0 && (
-                                      <div>
-                                        <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1 px-2 border-b border-slate-700/50 pb-1 mt-2">Past</div>
-                                        {pastSessions.map((sess: any) => (
+                                      <div className={(upcomingSessions.length > 0 || todaySessions.length > 0) ? "mt-2" : ""}>
+                                        <div onClick={() => setShowPast(!showPast)} className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1 px-2 border-b border-slate-700/50 pb-1 cursor-pointer hover:text-slate-300 transition-colors flex items-center gap-1.5">
+                                          {showPast ? "▼" : "▶"} Past ({pastSessions.length})
+                                        </div>
+                                        {showPast && pastSessions.map((sess: any) => (
                                           <React.Fragment key={`past-frag-${sess.originalIdx}`}>
                                             {renderSessionRow(sess)}
                                             {sess.subsessions?.map((sub: any, sIdx: number) => renderSessionRow(sub, true, sIdx, sess.originalIdx))}
@@ -1080,63 +1109,64 @@ Format: [{"name": "🤖: Precise Action Name", "slots": 1, "est_time": "1h 30m",
             {activeTask ? (() => {
               const currentSubs = (subtaskDict[activeTask] || []).map((sub: any, originalIdx: number) => ({ ...sub, originalIdx }));
               const sortedSubs = [...currentSubs].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+              const activeSubs = sortedSubs.filter((s: any) => !s.done);
+              const completedSubs = sortedSubs.filter((s: any) => s.done);
 
               return (
-                <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-3 space-y-1">
-                  <div className="mb-4 bg-[#0a0d14] rounded-lg border border-slate-700/50 p-3 shadow-inner">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Task Name</p>
-                    <AutoTextarea 
-                      value={activeTask} 
-                      onChange={(val: string) => {
-                        if (val && val.trim() !== "") {
-                          updateTaskField(activeTask, "Name", val);
-                        }
-                      }}
-                      className="text-[13px] font-bold text-indigo-300 tracking-wider leading-snug w-full"
-                    />
-                  </div>
-                  
-                  <div className="flex gap-2 mb-3">
-                    <input 
-                      type="text" 
-                      value={newSubtask}
-                      onChange={(e) => setNewSubtask(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                      placeholder="Add subtask..."
-                      className="flex-1 bg-[#0a0d14] border border-slate-700 rounded px-2.5 py-1.5 text-[12px] text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
-                    />
-                    <button onClick={handleAddSubtask} className="bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 px-3 rounded font-bold text-[16px] transition-colors pb-0.5">+</button>
+                <div className="absolute inset-0 flex flex-col p-3">
+                  <div className="shrink-0 space-y-3 mb-3">
+                    <div className="bg-[#0a0d14] rounded-lg border border-slate-700/50 p-3 shadow-inner">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Task Name</p>
+                      <AutoTextarea 
+                        value={activeTask} 
+                        onChange={(val: string) => {
+                          if (val && val.trim() !== "") updateTaskField(activeTask, "Name", val);
+                        }}
+                        className="text-[13px] font-bold text-indigo-300 tracking-wider leading-snug w-full"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={newSubtask}
+                        onChange={(e) => setNewSubtask(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                        placeholder="Add subtask..."
+                        className="flex-1 bg-[#0a0d14] border border-slate-700 rounded px-2.5 py-1.5 text-[12px] text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                      <button onClick={handleAddSubtask} className="bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 px-3 rounded font-bold text-[16px] transition-colors pb-0.5">+</button>
+                    </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-0.5">
-                    {sortedSubs.map((sub: any) => (
-                      <div 
-                        key={`sub-${sub.originalIdx}`} 
-                        draggable 
-                        onDragStart={(e) => handleSubtaskDragStart(e, sub.originalIdx)}
-                        onDragOver={handleRowDragOver}
-                        onDrop={(e) => handleSubtaskDrop(e, sub.originalIdx)}
-                        className="flex items-start gap-2.5 py-2 px-1 group cursor-grab active:cursor-grabbing hover:bg-white/[0.03] rounded transition-colors text-left"
-                      >
-                        <input 
-                          type="checkbox" 
-                          checked={sub.done} 
-                          onChange={() => toggleSubtask(sub.originalIdx)} 
-                          className="appearance-none w-3.5 h-3.5 bg-transparent border border-slate-600 rounded-sm checked:bg-indigo-500 checked:border-indigo-500 shrink-0 mt-0.5 relative cursor-pointer
-                          after:content-[''] after:absolute after:hidden checked:after:block after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-white after:rotate-45 after:left-[4px] after:top-[1px] transition-colors"
-                        />
+                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-0.5 pr-1">
+                    {activeSubs.map((sub: any) => (
+                      <div key={`sub-${sub.originalIdx}`} draggable onDragStart={(e) => handleSubtaskDragStart(e, sub.originalIdx)} onDragOver={handleRowDragOver} onDrop={(e) => handleSubtaskDrop(e, sub.originalIdx)} className="flex items-start gap-2.5 py-2 px-1 group cursor-grab active:cursor-grabbing hover:bg-white/[0.03] rounded transition-colors text-left">
+                        <input type="checkbox" checked={sub.done} onChange={() => toggleSubtask(sub.originalIdx)} className="appearance-none w-3.5 h-3.5 bg-transparent border border-slate-600 rounded-sm checked:bg-indigo-500 checked:border-indigo-500 shrink-0 mt-0.5 relative cursor-pointer after:content-[''] after:absolute after:hidden checked:after:block after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-white after:rotate-45 after:left-[4px] after:top-[1px] transition-colors" />
                         <div className="flex-1 min-w-0 pt-[1px] flex flex-col">
-                          <AutoTextarea 
-                            value={sub.name} 
-                            onChange={(val: string) => updateSubtaskName(sub.originalIdx, val)}
-                            className={`leading-relaxed ${sub.done ? "text-slate-500/60 line-through" : "text-slate-300"}`}
-                          />
+                          <AutoTextarea value={sub.name} onChange={(val: string) => updateSubtaskName(sub.originalIdx, val)} className="leading-relaxed text-slate-300" />
                           {getUrl(sub.name) && <a href={getUrl(sub.name)!} target="_blank" rel="noreferrer" title="Open Link" className="text-indigo-400/70 hover:text-indigo-300 text-[10px] shrink-0 mt-1 transition-colors">🔗</a>}
                         </div>
                         <button onClick={() => deleteSubtask(sub.originalIdx)} className="opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 text-xs mt-0.5" title="Delete subtask">🗑️</button>
-                        <span className="text-slate-600/50 cursor-grab select-none shrink-0 opacity-0 group-hover:opacity-100 mt-0.5 text-[14px]">⋮⋮</span>
                       </div>
                     ))}
+                    
+                    {completedSubs.length > 0 && (
+                      <div className="pt-3 mt-3 border-t border-slate-800/60">
+                        <div onClick={() => setShowCompletedSubs(!showCompletedSubs)} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 cursor-pointer hover:text-slate-300 transition-colors flex items-center gap-2">
+                          {showCompletedSubs ? "▼" : "▶"} Completed ({completedSubs.length})
+                        </div>
+                        {showCompletedSubs && completedSubs.map((sub: any) => (
+                          <div key={`sub-${sub.originalIdx}`} className="flex items-start gap-2.5 py-1.5 px-1 group hover:bg-white/[0.03] rounded transition-colors text-left">
+                            <input type="checkbox" checked={sub.done} onChange={() => toggleSubtask(sub.originalIdx)} className="appearance-none w-3.5 h-3.5 bg-transparent border border-slate-600 rounded-sm checked:bg-indigo-500 checked:border-indigo-500 shrink-0 mt-0.5 relative cursor-pointer after:content-[''] after:absolute after:hidden checked:after:block after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-white after:rotate-45 after:left-[4px] after:top-[1px] transition-colors" />
+                            <div className="flex-1 min-w-0 pt-[1px] flex flex-col">
+                              <AutoTextarea value={sub.name} onChange={(val: string) => updateSubtaskName(sub.originalIdx, val)} className="leading-relaxed text-slate-500/60 line-through" />
+                            </div>
+                            <button onClick={() => deleteSubtask(sub.originalIdx)} className="opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 text-xs mt-0.5" title="Delete subtask">🗑️</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {sortedSubs.length === 0 && <p className="text-[12px] text-slate-600 italic py-4 text-center">No subtasks yet.</p>}
                   </div>
                 </div>

@@ -159,6 +159,7 @@ export default function BacklogTab({ appState, onSave }: { appState: any; onSave
   const [sortConfig, setSortConfig] = useState<{ key: string, dir: 'asc'|'desc' } | null>(null);
   const [catFilter, setCatFilter] = useState<string>("All Categories");
   const [showSubtasks, setShowSubtasks] = useState<boolean>(true);
+  const [showCompletedSubs, setShowCompletedSubs] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("backlogUIState");
@@ -427,9 +428,10 @@ export default function BacklogTab({ appState, onSave }: { appState: any; onSave
           <table className="w-full text-left whitespace-nowrap min-w-[950px] table-fixed">
             <thead className="bg-[#050505] sticky top-0 z-10 shadow-sm border-b border-slate-800/80">
               <tr className="text-slate-500 uppercase tracking-wider text-[10px] font-bold">
-                <th onClick={() => handleSort('Name')} className="px-4 py-3 text-left w-[34%] cursor-pointer hover:text-slate-300 select-none">Name {sortConfig?.key === 'Name' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
-                <th onClick={() => handleSort('Category')} className="px-2 py-3 text-left w-[14%] cursor-pointer hover:text-slate-300 select-none">Category {sortConfig?.key === 'Category' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th onClick={() => handleSort('Name')} className="px-4 py-3 text-left w-[30%] cursor-pointer hover:text-slate-300 select-none">Name {sortConfig?.key === 'Name' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th onClick={() => handleSort('Category')} className="px-2 py-3 text-left w-[12%] cursor-pointer hover:text-slate-300 select-none">Category {sortConfig?.key === 'Category' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => handleSort('Date')} className="px-2 py-3 text-center w-[6%] cursor-pointer hover:text-slate-300 select-none">Date {sortConfig?.key === 'Date' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
+                <th onClick={() => handleSort('Date Finished')} className="px-2 py-3 text-center w-[6%] cursor-pointer hover:text-slate-300 select-none">Finished {sortConfig?.key === 'Date Finished' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => handleSort('Due')} className="px-2 py-3 text-center w-[6%] cursor-pointer hover:text-slate-300 select-none">Due {sortConfig?.key === 'Due' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => handleSort('Priority')} className="px-2 py-3 text-left w-[8%] cursor-pointer hover:text-slate-300 select-none">Priority {sortConfig?.key === 'Priority' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => handleSort('Notes')} className="px-2 py-3 text-left w-[24%] cursor-pointer hover:text-slate-300 select-none">Notes {sortConfig?.key === 'Notes' ? (sortConfig.dir === 'asc' ? '↑' : '↓') : ''}</th>
@@ -458,6 +460,11 @@ export default function BacklogTab({ appState, onSave }: { appState: any; onSave
                         onChange={(val: string) => updateTaskField(task.Name, "Name", val)}
                         className={isActive ? 'text-indigo-200' : 'text-slate-200'}
                       />
+                      {subtaskDict[task.Name] && subtaskDict[task.Name].length > 0 && (
+                        <div className="text-[10px] text-slate-500 font-bold mt-1.5 flex items-center gap-1">
+                          ↳ {subtaskDict[task.Name].filter((s:any) => s.done).length}/{subtaskDict[task.Name].length} subtasks
+                        </div>
+                      )}
                     </td>
                     
                     <td className="px-2 py-2 align-top pt-2.5 min-w-0">
@@ -466,6 +473,10 @@ export default function BacklogTab({ appState, onSave }: { appState: any; onSave
                     
                     <td className="px-2 py-2 align-top pt-2.5 min-w-0">
                       <CustomDatePicker value={task.Date} onChange={(v: string) => updateTaskField(task.Name, "Date", v)} placeholder="-" className="w-full" />
+                    </td>
+
+                    <td className="px-2 py-2 align-top pt-2.5 min-w-0">
+                      <CustomDatePicker value={task["Date Finished"]} onChange={(v: string) => updateTaskField(task.Name, "Date Finished", v)} placeholder="-" className="w-full" />
                     </td>
                     
                     <td className="px-2 py-2 align-top pt-2.5 min-w-0">
@@ -489,13 +500,13 @@ export default function BacklogTab({ appState, onSave }: { appState: any; onSave
                     </td>
                     
                     <td className="px-2 py-2 align-top pt-2.5 min-w-0">
-                       <CustomSelect hideArrow={true} value={task.Status} onChange={(v: string) => updateTaskField(task.Name, "Status", v)} options={["Active", "Completed"]} getOptionColor={getStatusColor} className="w-full text-[12px]" />
+                       <CustomSelect hideArrow={true} value={task.Status} onChange={(v: string) => updateTaskField(task.Name, "Status", v)} options={["Active", "Completed"]} getOptionColor={getStatusColor} className="w-full text-left text-[12px] font-bold" />
                     </td>
                     
-                    <td className="px-4 py-2 align-top pt-3 min-w-0">
-                      <div className="flex items-center justify-end gap-3 w-full opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); moveToMasterLog(task.Name); }} className="text-slate-500 hover:text-indigo-400 transition-colors text-[16px] leading-none" title="Move to Master Log">↗</button>
-                        <button onClick={(e) => { e.stopPropagation(); deleteTask(task.Name); }} className="hover:scale-110 transition-transform text-xs leading-none" title="Delete permanently">🗑️</button>
+                    <td className="px-4 py-2 align-top pt-3 min-w-[70px]">
+                      <div className="flex items-center justify-end gap-3 w-full opacity-0 group-hover:opacity-100 transition-opacity relative z-10">
+                        <button onClick={(e) => { e.stopPropagation(); moveToMasterLog(task.Name); }} className="text-slate-500 hover:text-indigo-400 transition-colors text-[16px] leading-none cursor-pointer" title="Move to Master Log">↗</button>
+                        <button onClick={(e) => { e.stopPropagation(); deleteTask(task.Name); }} className="hover:scale-110 transition-transform text-xs leading-none cursor-pointer" title="Delete permanently">🗑️</button>
                       </div>
                     </td>
                   </tr>
@@ -523,63 +534,64 @@ export default function BacklogTab({ appState, onSave }: { appState: any; onSave
             {activeTask ? (() => {
               const currentSubs = (subtaskDict[activeTask] || []).map((sub: any, originalIdx: number) => ({ ...sub, originalIdx }));
               const sortedSubs = [...currentSubs].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+              const activeSubs = sortedSubs.filter((s: any) => !s.done);
+              const completedSubs = sortedSubs.filter((s: any) => s.done);
 
               return (
-                <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-3 space-y-1">
-                  <div className="mb-4 bg-[#0a0d14] rounded-lg border border-slate-700/50 p-3 shadow-inner">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Task Name</p>
-                    <AutoTextarea 
-                      value={activeTask} 
-                      onChange={(val: string) => {
-                        if (val && val.trim() !== "") {
-                          updateTaskField(activeTask, "Name", val);
-                        }
-                      }}
-                      className="text-[13px] font-bold text-indigo-300 tracking-wider leading-snug w-full"
-                    />
-                  </div>
-                  
-                  <div className="flex gap-2 mb-3">
-                    <input 
-                      type="text" 
-                      value={newSubtask}
-                      onChange={(e) => setNewSubtask(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                      placeholder="Add subtask..."
-                      className="flex-1 bg-[#0a0d14] border border-slate-700 rounded px-2.5 py-1.5 text-[12px] text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
-                    />
-                    <button onClick={handleAddSubtask} className="bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 px-3 rounded font-bold text-[16px] transition-colors pb-0.5">+</button>
+                <div className="absolute inset-0 flex flex-col p-3">
+                  <div className="shrink-0 space-y-3 mb-3">
+                    <div className="bg-[#0a0d14] rounded-lg border border-slate-700/50 p-3 shadow-inner">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Task Name</p>
+                      <AutoTextarea 
+                        value={activeTask} 
+                        onChange={(val: string) => {
+                          if (val && val.trim() !== "") updateTaskField(activeTask, "Name", val);
+                        }}
+                        className="text-[13px] font-bold text-indigo-300 tracking-wider leading-snug w-full"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={newSubtask}
+                        onChange={(e) => setNewSubtask(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                        placeholder="Add subtask..."
+                        className="flex-1 bg-[#0a0d14] border border-slate-700 rounded px-2.5 py-1.5 text-[12px] text-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                      <button onClick={handleAddSubtask} className="bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 px-3 rounded font-bold text-[16px] transition-colors pb-0.5">+</button>
+                    </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-0.5">
-                    {sortedSubs.map((sub: any) => (
-                      <div 
-                        key={`sub-${sub.originalIdx}`} 
-                        draggable 
-                        onDragStart={(e) => handleSubtaskDragStart(e, sub.originalIdx)}
-                        onDragOver={handleRowDragOver}
-                        onDrop={(e) => handleSubtaskDrop(e, sub.originalIdx)}
-                        className="flex items-start gap-2.5 py-2 px-1 group cursor-grab active:cursor-grabbing hover:bg-white/[0.03] rounded transition-colors text-left"
-                      >
-                        <input 
-                          type="checkbox" 
-                          checked={sub.done} 
-                          onChange={() => toggleSubtask(sub.originalIdx)} 
-                          className="appearance-none w-3.5 h-3.5 bg-transparent border border-slate-600 rounded-sm checked:bg-indigo-500 checked:border-indigo-500 shrink-0 mt-0.5 relative cursor-pointer
-                          after:content-[''] after:absolute after:hidden checked:after:block after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-white after:rotate-45 after:left-[4px] after:top-[1px] transition-colors"
-                        />
+                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-0.5 pr-1">
+                    {activeSubs.map((sub: any) => (
+                      <div key={`sub-${sub.originalIdx}`} draggable onDragStart={(e) => handleSubtaskDragStart(e, sub.originalIdx)} onDragOver={handleRowDragOver} onDrop={(e) => handleSubtaskDrop(e, sub.originalIdx)} className="flex items-start gap-2.5 py-2 px-1 group cursor-grab active:cursor-grabbing hover:bg-white/[0.03] rounded transition-colors text-left">
+                        <input type="checkbox" checked={sub.done} onChange={() => toggleSubtask(sub.originalIdx)} className="appearance-none w-3.5 h-3.5 bg-transparent border border-slate-600 rounded-sm checked:bg-indigo-500 checked:border-indigo-500 shrink-0 mt-0.5 relative cursor-pointer after:content-[''] after:absolute after:hidden checked:after:block after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-white after:rotate-45 after:left-[4px] after:top-[1px] transition-colors" />
                         <div className="flex-1 min-w-0 pt-[1px] flex flex-col">
-                          <AutoTextarea 
-                            value={sub.name} 
-                            onChange={(val: string) => updateSubtaskName(sub.originalIdx, val)}
-                            className={`leading-relaxed ${sub.done ? "text-slate-500/60 line-through" : "text-slate-300"}`}
-                          />
+                          <AutoTextarea value={sub.name} onChange={(val: string) => updateSubtaskName(sub.originalIdx, val)} className="leading-relaxed text-slate-300" />
                           {getUrl(sub.name) && <a href={getUrl(sub.name)!} target="_blank" rel="noreferrer" title="Open Link" className="text-indigo-400/70 hover:text-indigo-300 text-[10px] shrink-0 mt-1 transition-colors">🔗</a>}
                         </div>
                         <button onClick={() => deleteSubtask(sub.originalIdx)} className="opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 text-xs mt-0.5" title="Delete subtask">🗑️</button>
-                        <span className="text-slate-600/50 cursor-grab select-none shrink-0 opacity-0 group-hover:opacity-100 mt-0.5 text-[14px]">⋮⋮</span>
                       </div>
                     ))}
+                    
+                    {completedSubs.length > 0 && (
+                      <div className="pt-3 mt-3 border-t border-slate-800/60">
+                        <div onClick={() => setShowCompletedSubs(!showCompletedSubs)} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 cursor-pointer hover:text-slate-300 transition-colors flex items-center gap-2">
+                          {showCompletedSubs ? "▼" : "▶"} Completed ({completedSubs.length})
+                        </div>
+                        {showCompletedSubs && completedSubs.map((sub: any) => (
+                          <div key={`sub-${sub.originalIdx}`} className="flex items-start gap-2.5 py-1.5 px-1 group hover:bg-white/[0.03] rounded transition-colors text-left">
+                            <input type="checkbox" checked={sub.done} onChange={() => toggleSubtask(sub.originalIdx)} className="appearance-none w-3.5 h-3.5 bg-transparent border border-slate-600 rounded-sm checked:bg-indigo-500 checked:border-indigo-500 shrink-0 mt-0.5 relative cursor-pointer after:content-[''] after:absolute after:hidden checked:after:block after:w-[3px] after:h-[7px] after:border-r-2 after:border-b-2 after:border-white after:rotate-45 after:left-[4px] after:top-[1px] transition-colors" />
+                            <div className="flex-1 min-w-0 pt-[1px] flex flex-col">
+                              <AutoTextarea value={sub.name} onChange={(val: string) => updateSubtaskName(sub.originalIdx, val)} className="leading-relaxed text-slate-500/60 line-through" />
+                            </div>
+                            <button onClick={() => deleteSubtask(sub.originalIdx)} className="opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 text-xs mt-0.5" title="Delete subtask">🗑️</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {sortedSubs.length === 0 && <p className="text-[12px] text-slate-600 italic py-4 text-center">No subtasks yet.</p>}
                   </div>
                 </div>
