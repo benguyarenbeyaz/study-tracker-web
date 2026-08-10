@@ -184,9 +184,22 @@ export default function CalendarTab({ appState }: { appState: any }) {
         addEvent(dueDateKey, { type: 'due', name, category, status, isCompleted: taskCompleted, isFullyCompletedOverall, timeValue: parseTimeStr(rawDueTime), timeLabel: rawDueTime });
       }
 
-      // Group sessions by date
+      // Recursive function to flatten sessions and all infinite nested subsessions
+      const flattenSessions = (sessions: any[], level = 0): any[] => {
+        let flat: any[] = [];
+        (sessions || []).forEach((s: any) => {
+          flat.push({ ...s, _level: level });
+          if (s.subsessions && s.subsessions.length > 0) {
+            flat = flat.concat(flattenSessions(s.subsessions, level + 1));
+          }
+        });
+        return flat;
+      };
+
+      // Group all flattened sessions by date
+      const allTaskSessions = flattenSessions(task.sessions || []);
       const sessionsByDate: Record<string, any[]> = {};
-      (task.sessions || []).forEach((s: any) => {
+      allTaskSessions.forEach((s: any) => {
         const sDate = standardizeDate(s.date || s.Date);
         if (sDate) {
           if (!sessionsByDate[sDate]) sessionsByDate[sDate] = [];
@@ -207,6 +220,9 @@ export default function CalendarTab({ appState }: { appState: any }) {
       
       // Plot grouped sessions
       Object.entries(sessionsByDate).forEach(([dateStr, daySessions]) => {
+        // Sort sessions for this day strictly chronologically (closest to farthest)
+        daySessions.sort((a, b) => parseTimeStr(a.start_time || a.time || "") - parseTimeStr(b.start_time || b.time || ""));
+
         // If ALL sessions for this day are complete, mark the parent as complete for this day
         const allDailySessionsCompleted = daySessions.every((s: any) => 
           s.status === "Completed" || s.Status === "Completed" || s.completed === true
@@ -227,7 +243,8 @@ export default function CalendarTab({ appState }: { appState: any }) {
             return {
               name: s.name || name,
               timeLabel: label,
-              isCompleted: s.status === "Completed" || s.Status === "Completed" || s.completed === true
+              isCompleted: s.status === "Completed" || s.Status === "Completed" || s.completed === true,
+              level: s._level || 0
             };
           })
         });
@@ -349,9 +366,10 @@ export default function CalendarTab({ appState }: { appState: any }) {
                           </span>
                           <div className="flex flex-col gap-1 mt-1 pl-1.5 border-l border-indigo-500/30 ml-0.5">
                             {evt.sessions.map((session: any, sIdx: number) => (
-                              <div key={sIdx} className={`flex flex-col ${session.isCompleted ? 'line-through opacity-50' : ''}`}>
+                              <div key={sIdx} className={`flex flex-col ${session.isCompleted ? 'line-through opacity-50' : ''}`} style={{ marginLeft: session.level ? `${session.level * 8}px` : '0px' }}>
                                 {session.timeLabel && <span className="font-mono text-[9px] opacity-80 mb-[1px]">{session.timeLabel}</span>}
-                                <span className="italic text-[10px] font-medium leading-snug">
+                                <span className="italic text-[10px] font-medium leading-snug flex items-start">
+                                  {session.level > 0 && <span className="text-indigo-500/70 mr-1 not-italic opacity-80 font-mono">↳</span>}
                                   {session.isCompleted && <span className="text-emerald-500 mr-1 not-italic font-bold">✓</span>}
                                   {session.name}
                                 </span>
